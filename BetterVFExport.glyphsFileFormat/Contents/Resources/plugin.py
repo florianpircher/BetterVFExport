@@ -16,7 +16,9 @@
 ###########################################################################################################
 
 import objc
-import os, subprocess, fontTools
+import os
+import subprocess
+import fontTools
 from fontTools import ttLib
 from GlyphsApp import Glyphs, INSTANCETYPEVARIABLE, VARIABLE, PLAIN, WOFF, WOFF2
 from GlyphsApp.plugins import FileFormatPlugin
@@ -72,7 +74,7 @@ def parameterToSTAT(variableFontExport, font, fontPath):
 	for parameter in variableFontExport.customParameters:
 		if parameter.name == axisValuesParameterName and parameter.active:
 			changed = True
-			
+
 			statCode = parameter.value
 			axisTag, axisValueCode = statCode.split(";")
 			axisTag = axisTag.strip()
@@ -161,7 +163,7 @@ def fixItalicFvar(font, fontPath):
 		if nameValue != oldName:
 			nameTableEntry.string = nameValue
 			anythingChanged = True
-	
+
 	if anythingChanged:
 		font.save(fontPath, reorderTables=False)
 
@@ -189,7 +191,6 @@ class BetterVFExport(FileFormatPlugin):
 		self.openInFinderCheckBox.setState_(Glyphs.defaults[openInFinderPref])
 
 
-	# Example function. You may delete it
 	@objc.IBAction
 	def setOpenInFinder_(self, sender):
 		Glyphs.defaults[openInFinderPref] = bool(sender.intValue())
@@ -204,7 +205,7 @@ class BetterVFExport(FileFormatPlugin):
 				variableFontSettings.append(instance)
 		if not variableFontSettings:
 			return False, "No VF Setting found in Font Info → Exports."
-		
+
 		for i in variableFontSettings:
 			filePath = currentExportPath
 			subFolder = i.customParameters["Export Folder"]
@@ -233,7 +234,7 @@ class BetterVFExport(FileFormatPlugin):
 				containers=containers,
 				decomposeSmartStuff=True,
 			)
-			
+
 			for fontPath in checkPaths:
 				font = ttLib.TTFont(fontPath)
 
@@ -246,7 +247,7 @@ class BetterVFExport(FileFormatPlugin):
 
 		if Glyphs.defaults[openInFinderPref] and os.path.exists(currentExportPath):
 			subprocess.call(["open", currentExportPath])
-		
+
 		return True, "VF exported successfully."
 
 	@objc.python_method

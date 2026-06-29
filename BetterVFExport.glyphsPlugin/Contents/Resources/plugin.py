@@ -12,11 +12,14 @@
 ###########################################################################################################
 
 from __future__ import division, print_function, unicode_literals
-import objc, os, subprocess, fontTools
+import objc
+import os
+import subprocess
+import fontTools
 from fontTools import ttLib
 from GlyphsApp import Glyphs, DOCUMENTEXPORTED, FILE_MENU, INSTANCETYPEVARIABLE
 from GlyphsApp.plugins import GeneralPlugin
-from AppKit import NSMenuItem
+from AppKit import NSMenuItem, NSImage
 
 
 openInFinderPref = "com.mekkablue.BetterVFExport.openInFinder"
@@ -62,7 +65,7 @@ def parameterToSTAT(variableFontExport, font, fontPath):
 	for parameter in variableFontExport.customParameters:
 		if parameter.name == axisValuesParameterName and parameter.active:
 			changed = True
-			
+
 			statCode = parameter.value
 			axisTag, axisValueCode = statCode.split(";")
 			axisTag = axisTag.strip()
@@ -151,7 +154,7 @@ def fixItalicFvar(font, fontPath):
 		if nameValue != oldName:
 			nameTableEntry.string = nameValue
 			anythingChanged = True
-	
+
 	if anythingChanged:
 		font.save(fontPath, reorderTables=False)
 
@@ -173,10 +176,10 @@ class BetterVFExportCallback(GeneralPlugin):
 	def start(self):
 		# pref
 		Glyphs.registerDefault(openInFinderPref, True)
-		
+
 		# callback
 		Glyphs.addCallback(self.fontsExported_, DOCUMENTEXPORTED)
-		
+
 		active = Glyphs.localize({
 			'en': 'Active',
 			'de': 'aktiv',
@@ -184,7 +187,7 @@ class BetterVFExportCallback(GeneralPlugin):
 			'es': 'activada',
 			'pt': 'ativada',
 		})
-		
+
 		# menu item
 		if Glyphs.versionNumber >= 3.3:
 			newMenuItem = NSMenuItem(f"☑️ {self.name} {active}", callback=None, target=None)
@@ -198,7 +201,7 @@ class BetterVFExportCallback(GeneralPlugin):
 		instance = exportInfo["instance"]
 		if instance.type != INSTANCETYPEVARIABLE:
 			return False, None
-			
+
 		fontPaths = exportInfo["fontFilePaths"]
 		for fontPath in fontPaths:
 			font = ttLib.TTFont(fontPath)
@@ -210,7 +213,7 @@ class BetterVFExportCallback(GeneralPlugin):
 		firstExportedFontPath = exportInfo["fontFilePath"]
 		if Glyphs.defaults[openInFinderPref] and os.path.exists(firstExportedFontPath):
 			subprocess.call(["open", "-R", firstExportedFontPath])
-		
+
 		return True, "VF exported successfully."
 
 
