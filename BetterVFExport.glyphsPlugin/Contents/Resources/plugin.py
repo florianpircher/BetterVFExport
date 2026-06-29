@@ -189,10 +189,8 @@ class BetterVFExportCallback(GeneralPlugin):
 		})
 
 		# menu item
-		if Glyphs.versionNumber >= 3.3:
-			newMenuItem = NSMenuItem(f"☑️ {self.name} {active}", callback=None, target=None)
-		else:
-			newMenuItem = NSMenuItem(f"☑️ {self.name} {active}", None)
+		newMenuItem = NSMenuItem.new()
+		newMenuItem.setTitle_(f"☑️ {self.name} {active}")
 		Glyphs.menu[FILE_MENU].append(newMenuItem)
 
 
