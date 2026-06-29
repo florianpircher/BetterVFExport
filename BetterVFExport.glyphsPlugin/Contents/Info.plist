@@ -13,15 +13,9 @@
 	<key>CFBundleName</key>
 	<string>BetterVFExportCallback</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string> <!-- 1.0 -->
+	<string>1.0.1</string> <!-- 1.0 -->
 	<key>CFBundleVersion</key>
-	<string>1</string> <!-- 123 -->
-	<key>UpdateFeedURL</key>
-	<string>https://raw.githubusercontent.com/mekkablue/BetterVFExport/master/BetterVFExport.glyphsPlugin/Contents/Info.plist</string>
-	<key>productPageURL</key>
-	<string>https://github.com/mekkablue/BetterVFExport</string>
-	<key>productReleaseNotes</key>
-	<string>Initial Release</string>
+	<string>2</string> <!-- 123 -->
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, mekkablue, 2025</string>
 	<key>NSPrincipalClass</key>
