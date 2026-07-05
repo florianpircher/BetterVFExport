@@ -180,17 +180,16 @@ class BetterVFExportCallback(GeneralPlugin):
 		# callback
 		Glyphs.addCallback(self.fontsExported_, DOCUMENTEXPORTED)
 
-		active = Glyphs.localize({
-			'en': 'Active',
-			'de': 'aktiv',
-			'fr': 'activée',
-			'es': 'activada',
-			'pt': 'ativada',
-		})
-
 		# menu item
 		newMenuItem = NSMenuItem.new()
-		newMenuItem.setTitle_(f"☑️ {self.name} {active}")
+		newMenuItem.setTitle_(self.name)
+
+		image = None
+		try:
+			image = NSImage.imageWithSystemSymbolName_accessibilityDescription_("checkmark", "checkmark")
+			newMenuItem.setImage_(image)
+		except:
+			newMenuItem.setState_(True)
 		Glyphs.menu[FILE_MENU].append(newMenuItem)
 
 
