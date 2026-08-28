@@ -124,8 +124,10 @@ def parameterToSTAT(variableFontExport, font, fontPath):
 
 				newAxisValues.append(newAxisValue)
 
-	statTable.AxisValueArray.AxisValue = newAxisValues
+	# only touch the STAT table if there was at least one active parameter,
+	# otherwise we would wipe the axis values Glyphs built by itself:
 	if changed:
+		statTable.AxisValueArray.AxisValue = newAxisValues
 		font.save(fontPath, reorderTables=False)
 
 
