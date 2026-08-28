@@ -24,15 +24,15 @@
 	<key>CFBundleName</key>
 	<string>BetterVFExport</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string> <!-- 1.0 -->
+	<string>1.0.1</string> <!-- 1.0 -->
 	<key>CFBundleVersion</key>
-	<string>1</string> <!-- 123 -->
+	<string>2</string> <!-- 123 -->
 	<key>UpdateFeedURL</key>
 	<string>https://raw.githubusercontent.com/mekkablue/BetterVFExport/master/BetterVFExport.glyphsFileFormat/Contents/Info.plist</string>
 	<key>productPageURL</key>
 	<string>https://github.com/mekkablue/BetterVFExport</string>
 	<key>productReleaseNotes</key>
-	<string>Initial Release</string>
+	<string>Keeps the STAT table Glyphs builds if all Axis Values parameters are disabled.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, Rainer Erich Scheichelbauer, 2025</string>
 	<key>NSPrincipalClass</key>
