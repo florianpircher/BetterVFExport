@@ -220,10 +220,10 @@ class BetterVFExport(FileFormatPlugin):
 			checkPaths = [filePath + ".ttf"]
 			if Glyphs.defaults["GXExportWOFF"]:
 				containers.append(WOFF)
-				checkFiles.append(filePath + ".woff")
+				checkPaths.append(filePath + ".woff")
 			if Glyphs.defaults["GXExportWOFF2"]:
 				containers.append(WOFF2)
-				checkFiles.append(filePath + ".woff2")
+				checkPaths.append(filePath + ".woff2")
 
 			# GENERATE VF
 			i.generate(
