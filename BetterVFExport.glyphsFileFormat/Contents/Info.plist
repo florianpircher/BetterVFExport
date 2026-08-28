@@ -24,15 +24,15 @@
 	<key>CFBundleName</key>
 	<string>BetterVFExport</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.2</string> <!-- 1.0 -->
+	<string>1.0.3</string> <!-- 1.0 -->
 	<key>CFBundleVersion</key>
-	<string>3</string> <!-- 123 -->
+	<string>4</string> <!-- 123 -->
 	<key>UpdateFeedURL</key>
 	<string>https://raw.githubusercontent.com/mekkablue/BetterVFExport/master/BetterVFExport.glyphsFileFormat/Contents/Info.plist</string>
 	<key>productPageURL</key>
 	<string>https://github.com/mekkablue/BetterVFExport</string>
 	<key>productReleaseNotes</key>
-	<string>Fixes an error when exporting with WOFF or WOFF2 enabled.</string>
+	<string>Reports malformed Axis Values parameters in the Macro Window instead of crashing.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, Rainer Erich Scheichelbauer, 2025</string>
 	<key>NSPrincipalClass</key>

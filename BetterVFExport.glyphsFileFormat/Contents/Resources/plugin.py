@@ -20,6 +20,7 @@ import os
 import subprocess
 import fontTools
 from fontTools import ttLib
+from fontTools.ttLib.tables import otTables
 from GlyphsApp import Glyphs, INSTANCETYPEVARIABLE, VARIABLE, PLAIN, WOFF, WOFF2
 from GlyphsApp.plugins import FileFormatPlugin
 
@@ -38,12 +39,13 @@ def currentOTVarExportPath():
 @objc.python_method
 def designAxisRecordDict(statTable):
 	axes = []
-	for axis in statTable.DesignAxisRecord.Axis:
-		axes.append({
-			"nameID": axis.AxisNameID,
-			"tag": axis.AxisTag,
-			"ordering": axis.AxisOrdering,
-		})
+	if statTable.DesignAxisRecord:
+		for axis in statTable.DesignAxisRecord.Axis:
+			axes.append({
+				"nameID": axis.AxisNameID,
+				"tag": axis.AxisTag,
+				"ordering": axis.AxisOrdering,
+			})
 	return axes
 
 
@@ -62,82 +64,214 @@ def nameDictAndHighestNameID(nameTable):
 
 
 @objc.python_method
+def reportProblems(problems, instanceName=None, fontPath=None):
+	"""
+	Lists the problems in the Macro Window and brings it to the front.
+	"""
+	print("⚠️ Better VF Export: %i problem%s in the ‘%s’ parameter%s%s:" % (
+		len(problems),
+		"" if len(problems) == 1 else "s",
+		axisValuesParameterName,
+		"" if len(problems) == 1 else "s",
+		" of ‘%s’" % instanceName if instanceName else "",
+	))
+	for problem in problems:
+		print("   • %s" % problem)
+	if fontPath:
+		print("   Left the STAT table of %s untouched. Fix the parameter in Font Info → Exports and export again." % os.path.basename(fontPath))
+	Glyphs.showMacroWindow()
+
+
+@objc.python_method
+def floatsFromCode(code, separator=None, count=None):
+	"""
+	Turns code into a list of count numbers, split at separator,
+	or a single number if no separator is given.
+	Returns None if the code does not hold exactly count numbers.
+	"""
+	if count is None:
+		return None
+	particles = code.split(separator) if separator else [code]
+	if len(particles) != count:
+		return None
+	numbers = []
+	for particle in particles:
+		try:
+			numbers.append(float(particle.strip()))
+		except ValueError:
+			return None
+	return numbers
+
+
+@objc.python_method
+def formatAndNumbersFromCode(valueCode):
+	"""
+	Interprets the value part of an axis value entry:
+		700>400 → (3, [700.0, 400.0]), style linking
+		100:400:900 → (2, [100.0, 400.0, 900.0]), range
+		400 → (1, [400.0]), discrete spot
+	Returns the numbers as None if the code does not hold the expected amount of numbers.
+	"""
+	if ">" in valueCode:
+		return 3, floatsFromCode(valueCode, separator=">", count=2)
+	elif ":" in valueCode:
+		return 2, floatsFromCode(valueCode, separator=":", count=3)
+	else:
+		return 1, floatsFromCode(valueCode, count=1)
+
+
+@objc.python_method
+def newAxisValue(valueFormat=None, numbers=None, axisIndex=None, valueNameID=None, flags=0):
+	"""
+	Builds a fontTools AxisValue out of the pieces parsed from an axis value entry.
+	Returns None if anything is missing or does not add up.
+	"""
+	numberCounts = {1: 1, 2: 3, 3: 2}
+	if valueFormat not in numberCounts.keys() or axisIndex is None or valueNameID is None:
+		return None
+	if not numbers or len(numbers) != numberCounts[valueFormat]:
+		return None
+
+	axisValue = otTables.AxisValue()
+	axisValue.Format = valueFormat
+	axisValue.AxisIndex = axisIndex
+	axisValue.ValueNameID = valueNameID
+	axisValue.Flags = flags
+
+	if valueFormat == 3:  # STYLE LINKING
+		axisValue.Value, axisValue.LinkedValue = numbers
+	elif valueFormat == 2:  # RANGE
+		axisValue.RangeMinValue, axisValue.NominalValue, axisValue.RangeMaxValue = numbers
+	else:  # DISCRETE SPOT
+		axisValue.Value = numbers[0]
+
+	return axisValue
+
+
+@objc.python_method
+def parseAxisValuesParameter(parameterValue, axisTags=None):
+	"""
+	Parses the value of an Axis Values parameter, e.g. `wght; 400=Regular, 700>400=Bold*`.
+	Returns a list of entries and a list of problem descriptions.
+	The entries only carry parsed numbers and names, so the caller can bail out
+	before anything in the font is touched.
+	"""
+	entries = []
+	problems = []
+
+	code = str(parameterValue).strip() if parameterValue else ""
+	if not code:
+		return entries, ["The parameter is empty, expected something like ‘wght; 400=Regular’."]
+	if not axisTags:
+		return entries, ["‘%s’: the font has no STAT axes to attach the values to." % code]
+
+	codeParticles = code.split(";")
+	if len(codeParticles) != 2:
+		return entries, ["‘%s’: expected exactly one semicolon, as in ‘wght; 400=Regular’." % code]
+
+	axisTag = codeParticles[0].strip()[:4]
+	if axisTag not in axisTags:
+		return entries, ["‘%s’: the font has no ‘%s’ axis, only %s." % (code, axisTag, ", ".join(axisTags))]
+	axisIndex = axisTags.index(axisTag)
+
+	for entryCode in codeParticles[1].split(","):
+		entryCode = entryCode.strip()
+		if not entryCode:
+			problems.append("‘%s’: empty entry, perhaps a stray comma." % code)
+			continue
+
+		entryParticles = entryCode.split("=")
+		if len(entryParticles) != 2:
+			problems.append("‘%s’: expected exactly one equals sign in ‘%s’, as in ‘400=Regular’." % (code, entryCode))
+			continue
+
+		entryValues, entryName = [particle.strip() for particle in entryParticles]
+		entryFlags = 0
+		if entryName.endswith("*"):
+			entryFlags = 2
+			entryName = entryName[:-1].strip()
+		if not entryName:
+			problems.append("‘%s’: missing name in ‘%s’." % (code, entryCode))
+			continue
+
+		valueFormat, numbers = formatAndNumbersFromCode(entryValues)
+		if numbers is None:
+			problems.append("‘%s’: cannot read the numbers in ‘%s’." % (code, entryCode))
+			continue
+
+		entries.append({
+			"axisIndex": axisIndex,
+			"format": valueFormat,
+			"numbers": numbers,
+			"name": entryName,
+			"flags": entryFlags,
+		})
+
+	return entries, problems
+
+
+@objc.python_method
 def parameterToSTAT(variableFontExport, font, fontPath):
-	changed = False
+	if "STAT" not in font:
+		return
+
+	statTable = font["STAT"].table
+	axisTags = [axisInfo["tag"] for axisInfo in designAxisRecordDict(statTable)]
+
+	# parse everything first, so a typo cannot cripple the STAT table:
+	entries = []
+	problems = []
+	for parameter in variableFontExport.customParameters:
+		if parameter.name == axisValuesParameterName and parameter.active:
+			parameterEntries, parameterProblems = parseAxisValuesParameter(parameter.value, axisTags=axisTags)
+			entries.extend(parameterEntries)
+			problems.extend(parameterProblems)
+
+	if problems:
+		reportProblems(problems, instanceName=variableFontExport.name, fontPath=fontPath)
+		return
+
+	if not entries:
+		# no active parameter, so keep the STAT table Glyphs built:
+		return
 
 	nameTable = font["name"]
 	nameDict, highestID = nameDictAndHighestNameID(nameTable)
-	statTable = font["STAT"].table
-	axes = designAxisRecordDict(statTable)
 
+	# collect the names and build the axis values before we change anything:
+	namesToAdd = []
 	newAxisValues = []
-	for parameter in variableFontExport.customParameters:
-		if parameter.name == axisValuesParameterName and parameter.active:
-			changed = True
+	for entry in entries:
+		entryName = entry["name"]
+		if entryName not in nameDict.keys():
+			highestID += 1
+			nameDict[entryName] = highestID
+			namesToAdd.append((highestID, entryName))
 
-			statCode = parameter.value
-			axisTag, axisValueCode = statCode.split(";")
-			axisTag = axisTag.strip()
-			for i, axisInfo in enumerate(axes):
-				if axisTag == axisInfo["tag"]:
-					axisIndex = i
-					break
+		axisValue = newAxisValue(
+			valueFormat=entry["format"],
+			numbers=entry["numbers"],
+			axisIndex=entry["axisIndex"],
+			valueNameID=nameDict[entryName],
+			flags=entry["flags"],
+		)
+		if axisValue is None:
+			reportProblems(
+				["Cannot build an axis value for ‘%s’." % entryName],
+				instanceName=variableFontExport.name,
+				fontPath=fontPath,
+			)
+			return
+		newAxisValues.append(axisValue)
 
-			if len(axisTag) > 4:
-				axisTag = axisTag[:4]
+	# now change the font:
+	for nameID, entryName in namesToAdd:
+		nameTable.addName(entryName, platforms=((3, 1, 1033), ), minNameID=nameID - 1)
 
-			for entryCode in axisValueCode.split(","):
-				newAxisValue = fontTools.ttLib.tables.otTables.AxisValue()
-				entryValues, entryName = entryCode.split("=")
-				entryName = entryName.strip()
-				entryFlags = 0
-				if entryName.endswith("*"):
-					entryFlags = 2
-					entryName = entryName[:-1]
-
-				if entryName in nameDict.keys():
-					entryValueNameID = nameDict[entryName]
-				else:
-					# add name entry:
-					highestID += 1
-					entryValueNameID = highestID
-					nameTable.addName(entryName, platforms=((3, 1, 1033), ), minNameID=highestID - 1)
-					nameDict[entryName] = entryValueNameID
-
-				if ">" in entryValues:  # Format 3, STYLE LINKING
-					entryValue, entryLinkedValue = [float(x.strip()) for x in entryValues.split(">")]
-					newAxisValue.Format = 3
-					newAxisValue.AxisIndex = axisIndex
-					newAxisValue.ValueNameID = entryValueNameID
-					newAxisValue.Flags = entryFlags
-					newAxisValue.Value = entryValue
-					newAxisValue.LinkedValue = entryLinkedValue
-
-				elif ":" in entryValues:  # Format 2, RANGE
-					entryRangeMinValue, entryNominalValue, entryRangeMaxValue = [float(x.strip()) for x in entryValues.split(":")]
-					newAxisValue.Format = 2
-					newAxisValue.AxisIndex = axisIndex
-					newAxisValue.ValueNameID = entryValueNameID
-					newAxisValue.Flags = entryFlags
-					newAxisValue.RangeMinValue = entryRangeMinValue
-					newAxisValue.NominalValue = entryNominalValue
-					newAxisValue.RangeMaxValue = entryRangeMaxValue
-
-				else:  # Format 1, DISCRETE SPOT
-					entryValue = float(entryValues.strip())
-					newAxisValue.Format = 1
-					newAxisValue.AxisIndex = axisIndex
-					newAxisValue.ValueNameID = entryValueNameID
-					newAxisValue.Flags = entryFlags
-					newAxisValue.Value = entryValue
-
-				newAxisValues.append(newAxisValue)
-
-	# only touch the STAT table if there was at least one active parameter,
-	# otherwise we would wipe the axis values Glyphs built by itself:
-	if changed:
-		statTable.AxisValueArray.AxisValue = newAxisValues
-		font.save(fontPath, reorderTables=False)
+	if statTable.AxisValueArray is None:
+		statTable.AxisValueArray = otTables.AxisValueArray()
+	statTable.AxisValueArray.AxisValue = newAxisValues
+	font.save(fontPath, reorderTables=False)
 
 
 @objc.python_method
