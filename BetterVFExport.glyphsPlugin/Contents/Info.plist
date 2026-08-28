@@ -13,9 +13,9 @@
 	<key>CFBundleName</key>
 	<string>BetterVFExportCallback</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.2</string> <!-- 1.0 -->
+	<string>1.0.3</string> <!-- 1.0 -->
 	<key>CFBundleVersion</key>
-	<string>3</string> <!-- 123 -->
+	<string>4</string> <!-- 123 -->
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, mekkablue, 2025</string>
 	<key>NSPrincipalClass</key>
